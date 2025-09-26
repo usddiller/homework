@@ -1,0 +1,68 @@
+services:
+  postgres:
+    image: postgres:17.6
+    container_name: rest_api_postgres
+    restart: always
+    # ports:
+    #   - "${DB_PORT}:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+    env_file:
+      - .env
+    networks:
+      - social-network
+    volumes:
+      - postgres-volume:/var/lib/postgresql/data
+
+  redis:
+    image: valkey/valkey:8.1
+    container_name: rest_api_redis
+    restart: always
+    # ports:
+    #   - "${REDIS_PORT}:6379"
+    env_file:
+      - .env
+    networks:
+      - social-network
+    volumes:
+      - redis-volume:/data
+
+  app:
+    build: .
+    container_name: social_network_app
+    restart: always
+    command: ["./entrypoint.sh"]
+    depends_on:
+      - redis
+    # ports:
+    #   - "8000:8000"
+    networks:
+      - social-network
+    volumes:
+    - ./mediafiles:/app/mediafiles:rw
+    - ./staticfiles:/app/staticfiles:rw
+    - ./static:/app/static:rw
+
+  nginx:
+    image: nginx
+    container_name: my-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./staticfiles:/app/staticfiles/
+      - ./media:/app/media/
+    restart: always
+    networks:
+      - social-network
+
+
+volumes:
+  redis-volume:
+  postgres-volume:
+  app-static:
+
+networks:
+  social-network:

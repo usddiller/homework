@@ -1,0 +1,15 @@
+# FROM python:3.13.7 # Базовый (полный) образ на полноценном линуксе
+FROM python:3.13.7-slim # Чуток урезаный (раза в 2 меньше)
+# FROM python:3.13.7-slim-bullseye # Сильно урезаный (раза в 3 меньше базового)
+# FROM python:3.13.7-alpine # Прям вообще ничто(не надо)
+
+WORKDIR /app # рабочая директория внутри контейнера
+
+COPY requirements.txt . # копируем файл с зависимостями внутрь контейнера
+
+RUN pip install -r requirements.txt # устанавливаем зависимости
+EXPOSE 8000
+COPY . . # копируем наши файлы внутрь контейнера
+RUN chmod +x /app/entrypoint.sh
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["daphne", "settings.asgi:application", "-b", "0.0.0.0", "-p", "8000"]

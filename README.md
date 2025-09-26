@@ -28,3 +28,4 @@ pip install djangorestframework djangorestframework-simplejwt python-decouple dj
 - views
 - serializators
 - routers# homework
+# homework

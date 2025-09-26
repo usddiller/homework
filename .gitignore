@@ -1,0 +1,8 @@
+.env
+__pycache__/
+env/
+*.sqlite3
+keys/
+media/
+celerybeat-schedule
+staticfiles/
