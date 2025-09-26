@@ -8,6 +8,9 @@ from dirtyfields import DirtyFieldsMixin
 
 
 class Client(DirtyFieldsMixin, AbstractUser):
+    USERNAME_FIELD = "email"
+    EMAIL_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
     is_active = models.BooleanField(
         verbose_name="активированный аккаунт", default=False
     )
@@ -42,15 +45,15 @@ class Client(DirtyFieldsMixin, AbstractUser):
 
     def save(self, *args, **kwargs):
         now = timezone.now()
-    
+
         if self.is_superuser:
             self.is_active = True
             self.expired_code = now
             return super().save(*args, **kwargs)
-    
+
         if not self.pk:
             self.expired_code = now + timedelta(minutes=3)
-    
+
         return super().save(*args, **kwargs)
 
 

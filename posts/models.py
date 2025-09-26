@@ -83,3 +83,21 @@ class PostImage(models.Model):
 
     def __str__(self):
         return f"{self.pk} | {self.image}"
+from django.db import models
+
+class Article(models.Model):
+    source_id = models.CharField(max_length=255, null=True, blank=True)
+    source_name = models.CharField(max_length=255, blank=True)
+    author = models.CharField(max_length=255, blank=True)
+    title = models.CharField(max_length=500)
+    description = models.TextField(blank=True)
+    url = models.URLField(unique=True)
+    url_to_image = models.URLField(blank=True)
+    published_at = models.DateTimeField()
+    content = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ("-published_at",)
+
+    def __str__(self):
+        return self.title[:80]

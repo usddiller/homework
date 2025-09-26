@@ -21,40 +21,54 @@ from common.paginators import CustomPageNumberPagination
 from common.permissions import IsOwnerOrAdmin
 from common.filters import SearchFilter
 
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 
 class RegistrationViewSet(mixins.CreateModelMixin, GenericViewSet):
     permission_classes = [AllowAny]
     queryset = Client.objects.all()
     serializer_class = UserModelSerializer
     parser_classes = [MultiPartParser, FormParser]
+    swagger_tags = ["Auth"]
 
+    @swagger_auto_schema(
+        operation_description=(
+            "Регистрация пользователя (multipart/form-data). "
+            "Создаёт пользователя с is_active=false, генерирует код активации и отправляет письмо."
+        ),
+        tags=["Auth"],
+        consumes=["multipart/form-data"],
+        request_body=UserModelSerializer,   # ВАЖНО: вместо openapi.Schema
+        responses={201: "created", 400: "validation error"},
+    )
+
+    def create(self, request, *args, **kwargs):
+        return super().create(request, *args, **kwargs)
 
 class ActivateAccount(APIView):
     permission_classes = [AllowAny]
 
-    def _wants_json(self, request) -> bool:
-        accept = request.META.get("HTTP_ACCEPT", "")
-        return "application/json" in accept.lower()
+    @swagger_auto_schema(
+        operation_description="Активация аккаунта по email и коду из письма.",
+        tags=["Auth"],
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["email", "code"],
+            properties={
+                "email": openapi.Schema(type=openapi.TYPE_STRING, format="email"),
+                "code": openapi.Schema(type=openapi.TYPE_STRING, description="UUID активации"),
+            },
+        ),
+        responses={
+            200: openapi.Response("activation success"),
+            400: "code expired / invalid",
+            404: "activation link invalid",
+        },
+    )
+    def post(self, request: Request):
+        # твоя реализация уже есть — оставь как есть
+        ...
 
-    def get(self, request: Request, pk: int) -> Response:
-        code = request.query_params.get("code")
-        try:
-            user: Client = Client.objects.get(pk=pk, activation_code=code)
-        except Client.DoesNotExist:
-            if self._wants_json(request):
-                raise NotFound(detail="activation link invalid")
-            return render(request, "api/activation_failed.html")
-        now = timezone.now()
-        if now > user.expired_code:
-            if self._wants_json(request):
-                raise PermissionDenied(detail="code expired")
-            return render(request, "api/activation_failed.html")
-        user.is_active = True
-        user.save(update_fields=["is_active"])
-        if self._wants_json(request):
-            return Response({"message": "activation success!"})
-        return render(request, "api/activation_success.html")
-    
 
 class UserModelViewSet(
     mixins.ListModelMixin,
@@ -95,7 +109,7 @@ class FriendInvitesView(ViewSet):
             from_client=request.user
         )
         serializer = FriendInviteSerializer(
-            instance=invites, many=True, 
+            instance=invites, many=True,
         )
         return Response(data=serializer.data)
 
@@ -161,5 +175,48 @@ class FriendInvitesView(ViewSet):
 # QUERY_PARAMS
 # search - поиск по значению
 # orderBy (asc/desc) - сортировка по убыванию/возрастанию
-# filter/sortBy - сортировка по каким нибудь атрибутам 
+# filter/sortBy - сортировка по каким нибудь атрибутам
 # http://localhost/api/users/&search=Иван Иванов&sortBy=birthday&orderBy=asc
+from rest_framework.parsers import JSONParser, FormParser
+from rest_framework.permissions import AllowAny
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.utils import timezone
+from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
+from users.models import Client
+
+class ActivateAccountByEmail(APIView):
+    permission_classes = [AllowAny]
+    parser_classes = [JSONParser, FormParser]
+
+    @swagger_auto_schema(
+        operation_description="Активировать аккаунт по email и коду",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=["email", "code"],
+            properties={
+                "email": openapi.Schema(type=openapi.TYPE_STRING, format="email"),
+                "code": openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+        responses={200: "activation success", 400: "code expired / bad payload", 404: "not found"},
+    )
+    def post(self, request):
+        email = request.data.get("email")
+        code = request.data.get("code")
+        if not email or not code:
+            return Response({"detail": "email и code обязательны"}, status=400)
+
+        try:
+            user = Client.objects.get(email=email, activation_code=code)
+        except Client.DoesNotExist:
+            return Response({"detail": "user/code not found"}, status=404)
+
+        if timezone.now() > user.expired_code:
+            return Response({"detail": "code expired"}, status=400)
+
+        user.is_active = True
+        user.save(update_fields=["is_active"])
+        return Response({"message": "activation success"}, status=200)

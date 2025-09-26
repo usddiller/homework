@@ -44,7 +44,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "corsheaders.middleware.CorsMiddleware", 
+    "corsheaders.middleware.CorsMiddleware",
     "debug_toolbar.middleware.DebugToolbarMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -84,6 +84,7 @@ DATABASES = {
         "PORT": config("DB_PORT"),
     }
 }
+NEWSAPI_KEY = config("NEWSAPI_KEY")
 
 CHANNEL_LAYERS = {
     "default": {
@@ -148,12 +149,10 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {
-        "Bearer": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        }
-    }
+        "Bearer": {"type": "apiKey", "name": "Authorization", "in": "header"},
+    },
+    "USE_SESSION_AUTH": False,
+    "DOC_EXPANSION": "none",
 }
 
 SIMPLE_JWT = {
@@ -227,7 +226,7 @@ CACHES = {
     }
 }
 
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True

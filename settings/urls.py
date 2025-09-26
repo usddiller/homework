@@ -8,6 +8,7 @@ from rest_framework.routers import DefaultRouter
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+from users.views import ActivateAccountByEmail
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -36,18 +37,22 @@ router.register(
 )
 router.register(prefix="images", viewset=ImageViewSet, basename="images")
 
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+from rest_framework import permissions
+
 schema_view = get_schema_view(
     openapi.Info(
-        title="Snippets API",
+        title="News Service API",
         default_version="v1",
-        description="Test description",
-        terms_of_service="https://www.google.com/policies/terms/",
-        contact=openapi.Contact(email="contact@snippets.local"),
+        description="Сервис новостей с авторизацией (JWT). Эндпоинты: регистрация/активация, токены, статьи.",
+        contact=openapi.Contact(email="admin@example.com"),
         license=openapi.License(name="BSD License"),
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
 )
+
 template_patterns = [
     path(
         route="",
@@ -55,9 +60,15 @@ template_patterns = [
         name="base",
     ),
 ]
+from posts.views import ArticleViewSet  # добавить к импортам
+
+router.register(prefix="articles", viewset=ArticleViewSet, basename="articles")
 
 urlpatterns = (
     [
+          path("auth/activate/", ActivateAccountByEmail.as_view(), name="auth-activate-by-email"),
+        # твой GET-активатор:
+        path("activate/<int:pk>/", ActivateAccount.as_view(), name="activate-account"),
         path(route="", view=include(template_patterns)),
         path(route="admin/", view=admin.site.urls),
         path(
